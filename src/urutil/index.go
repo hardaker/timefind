@@ -155,6 +155,18 @@ func NewIndex(filename string) (*Index, error) {
 		}
 
 		idx.items[fn] = Times{Earliest, Latest}
+
+		// assume all files have been deleted--this changes some assumptions for
+		// how the indexer is run and how the data is stored.
+		//
+		// previously, we assume that data archives can only be written to:
+		// files are never modified or deleted.
+		//
+		// we relax this assumption to be more flexible: include paths might
+		// change, files renamed, or files deleted.
+		// eventually, we'll add a file last-modified timestamp to handle file
+		// modifications.
+		idx.vanished[fn] = true
 	}
 
 	return idx, nil
@@ -244,6 +256,7 @@ func (idx *Index) WriteOut() error {
 	cf := csv.NewWriter(f)
 
 	for _, e := range idx.sorted() {
+		// update index to remove entries whose file no longer exists
 		if _, ok := idx.vanished[e.filename]; ok {
 			delete(idx.vanished, e.filename)
 			continue

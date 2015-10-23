@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 /*type DataSource struct {
@@ -20,11 +21,11 @@ import (
 
 type Configuration struct {
 	IndexDir string
-	Paths   []string
-	Include []string
-	Exclude []string
-	Type    string
-	Alias   []string
+	Paths    []string
+	Include  []string
+	Exclude  []string
+	Type     string
+	Alias    []string
 }
 
 func ReadConfiguration(r io.Reader) (*Configuration, error) {
@@ -35,6 +36,17 @@ func ReadConfiguration(r io.Reader) (*Configuration, error) {
 		log.Fatalf("error in decoding config: %s\n", err)
 		return nil, err
 	}
+
+	// check for shell metacharacters '~'
+	for _, paths := range append(config.Paths, config.IndexDir) {
+		for _, p := range filepath.SplitList(paths) {
+			if strings.HasPrefix(p, "~") {
+				err := fmt.Errorf("urutil: paths cannot start with shell metacharacter '~': %q", p)
+				return nil, err
+			}
+		}
+	}
+
 	return &config, nil
 }
 

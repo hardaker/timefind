@@ -1,0 +1,14 @@
+2015-10-22  Calvin Ardi  <calvin@isi.edu>
+
+    * v1.0.2.1 -> v1.0.2.2
+
+    * indexer (aef/e18): returns error when paths start with shell
+      metacharacter '~'
+     
+    * indexer (aef/2fe): resulting index is updated if files are renamed
+      or removed
+   
+    * timefind (aef/4a0): returns errors when invalid timestamps are
+      input
+
+    * timefind (aef/785): usage now describes expected TIMESTAMP format

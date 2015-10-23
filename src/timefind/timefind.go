@@ -33,10 +33,15 @@ func vlog(format string, a ...interface{}) {
 	}
 }
 
-func parseTime(timestr string) time.Time {
+func parseTime(timestr string) (time.Time, error) {
+	if len(timestr) == 0 {
+		// returns "0001-01-01 00:00:00 +0000 UTC"
+		return time.Time{}, nil
+	}
+
 	for _, layout := range timeLayouts {
 		if t, err := time.Parse(layout, timestr); err == nil {
-			return t
+			return t, nil
 		}
 	}
 
@@ -52,11 +57,12 @@ func parseTime(timestr string) time.Time {
 			nsec, _ = strconv.ParseInt(t[1], 10, 64)
 		}
 
-		return time.Unix(sec, nsec)
+		return time.Unix(sec, nsec), nil
 	}
 
-	// returns "0001-01-01 00:00:00 +0000 UTC"
-	return time.Time{}
+	// exhausted all ways to interpret input timestamps
+	err = fmt.Errorf("could not parse timestamp; check format: %q", timestr)
+	return time.Time{}, err
 }
 
 func main() {
@@ -72,6 +78,20 @@ func main() {
 
 	getopt.SetParameters("SOURCE [SOURCE ...]")
 	getopt.Parse()
+
+	getopt.SetUsage(func() {
+		getopt.PrintUsage(os.Stderr)
+		fmt.Fprintf(os.Stderr,
+			`
+TIMESTAMP must be in one of the following formats:
+
+ RFC3339Nano	e.g., 2006-01-02T15:04:05.999999999Z07:00
+ RFC3339	e.g., 2006-01-02T15:04:05Z07:00
+ YYYY-MM-DD	e.g., 2006-01-02
+ Unix time	e.g., 1445471780, 1234471780.372802000
+
+`)
+	})
 
 	if *help {
 		getopt.Usage()
@@ -139,8 +159,14 @@ func main() {
 			log.Fatal(err)
 		}
 
-		earliest := parseTime(beginTimestamp)
-		latest := parseTime(endTimestamp)
+		earliest, err := parseTime(beginTimestamp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		latest, err := parseTime(endTimestamp)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// if we have no endTimestamp, set latest to the max time
 		if latest == (time.Time{}) {
