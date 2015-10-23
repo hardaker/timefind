@@ -1,0 +1,168 @@
+indexer
+=======
+
+`indexer' reads in a configuration file describing a source and outputs an
+index in CSV format containing a list of filenames, timestamp of the earliest
+record, and timestamp of the latest record.
+
+Using `timefind' in conjunction with these indexes, a user can downselect the
+number of files based on a time range.
+
+Dependencies and Building
+=========================
+
+1. Build configuration file. (e.g., SOURCENAME.conf.json)
+   See [Single Source Configuration File].
+
+2. Run indexer.
+
+    ./indexer -h
+
+    Usage: indexer [-huv] [-c PATH]
+     -c, --config=PATH  Path to configuration file (can be used multiple times)
+     -h, --help         Show this help message and exit
+     -u, --unixtime     write Unix time to indexes instead of RFC 3339
+     -v, --verbose      Verbose progress indicators and messages
+
+   After building your configuration file, you can run the indexer:
+
+    ./indexer -c SOURCENAME.conf.json
+
+Single Source Configuration File
+================================
+
+Each distinct data source requires its own configuration file.
+The name of the configuration file (or source) will be the name of the index:
+
+    source name => source configuration filename => index filename
+    dns         => dns.conf.json                 => dns.csv
+
+Note that the configuration filename MUST end in ".conf.json".
+
+Some example valid configuration filenames:
+
+    dns.conf.json
+    great_pcap.conf.json
+    http_traffic.conf.json
+
+A basic source file for DNS data (named "dns.conf.json") might look like this:
+
+    {
+        "indexDir": "/data/index",
+        "type": "pcap",
+        "paths": ["/data/pcap"],
+        "include": ["*.gz"],
+        "exclude": []
+    }
+
+The index directory ("indexDir") is where the indexed data will be stored. 
+After the indexer has finished running, the indexes can be found in the 
+in a .csv file located in "indexDir". The index filename is the same as the
+source name. 
+
+Each source has the components "type", "paths", "include", and "exclude". 
+
+"type" depends on the file format and which dates you wish to record from each
+file. See [Data Types and Processors] for the types of data that the indexer
+supports. If you don't see your data type listed, you will probably have to
+write a processor for it.
+
+"paths" is where the files that you wish to index are stored. 
+
+"include" specifies which files you wish to index. 
+"exclude" specifies which files you do not want indexed.
+
+
+Data Types and Processors
+=========================
+
+The indexer reads data files and indexes the earliest and latest time found in
+each file. It has the ability to index data classified under the following
+categories:
+
+1. "cpp": 
+    Unix timestamp is the first number listed on each line. Stores timestamp as
+    a string and parses it to time.
+
+2. "bomgar":
+    Searches for the expression "when='Unix timestamp'" on each line. Stores
+    timestamp as a string and parses it to time.
+
+3. "bluecoat":
+    Searches for a date of the format "YYYY-MM-DD HH:MM:SS" on each line.
+    Stores date as a string and parses it to time.
+
+4. "codevision": 
+    Searches for the expression "timestamp=YYYY-MM-DDTHH:MM:SS-ZZ:ZZ" on each
+    line.  Stores date listed inside the expressison as a string and parses it
+    to time.
+
+5. "cer":
+    Searches for the expression "receieved='YYYY-MM-DD HH:MM:SS.SSSSSS-ZZ:ZZ'"
+    on each line. Stores date listed inside the expression as a string and
+    parses it to time.
+
+6. "sep": 
+    Searches for the expression "Event Time: YYYY-MM-DD HH:MM:SS" on each line.
+    Stores date listed inside the expression as a string and parses it to time.
+    If the expression is not found, indexer searches for the expression "Begin:
+    YYYY-MM-DD HH:MM:SS" on each line. The date listed inside the expression is
+    stored as a string and is parsed to a time. If the expression is not found,
+    indexer uses the time listed at the beginning of each line. This time is
+    either of the format "Jan 2 2006 15:04:05" or the format "Jan 2 15:04:05"
+
+7. "juniper":
+    Searches for a date of the format "YYYY-MM-DD HH:MM:SS" on each line.
+    Stores date as a string and parses it to time. If a date of this format is
+    not found, indexer uses the time listed at the beginning of each line. This
+    time is either of the format "Jan 2 2006 15:04:05" or the format "Jan 2
+    15:04:05"
+
+8. "email":
+    Searches for the expression "[DATETIME]YYYY.MM.DD HH:MM:SS.SSSSSSS" on each
+    line.  Stores date listed inside the expression as a string and parses it
+    to time. 
+
+9. "text": 
+    Stores the time listed at the beginning of each line as a string and parses
+    it to time. This time is either of the format "Jan 2 2006 15:04:05 or the
+    format "Jan 2 15:04:05"
+
+10. "snare":
+    Searches for a date of the format "Mon Jan 02 15:04:05 2006" on each line.
+    Stores date as a string and parses it to time. If a date of this format is
+    not found, the time listed at the beginning of each line is used. This time
+    is of the format "YYYY-MM-DDTHH:MM:SS-ZZZZ"
+
+11. "iod":
+    Searches for a date of the format "YYYY-MM-DDTHH:MM:SS-ZZZZ" on each line.
+    Stores date as a string and parses it to time.
+
+12. "win_messages":
+    Searches for a date of the format "Mon Jan 2 15:04:05 2006" on each line.
+    If a date of this format is not found, indexer searches for a date of the
+    format "YYYY-MM-DDTHH:MM:SS-ZZ:ZZ" on each line. Stores date as a string
+    and parses it to time.
+
+13. "wireless":
+    Searches for the expression "Time=YYYY-MM-DDTHH:MM:SS" on each line. Stores
+    date listed inside the expression as a string and parses it to time. If the
+    expression is not found, the date listed at the beginning of each line is
+    used. This time is either of the format "Jan 2 15:04:05 2006" or the format
+    "Jan 2 15:04:05"
+
+14. "stealthwatch":
+    Searches for a date of the format "YYYY-MM-DDTHH:MM:SS" on each line.
+    Stores the date listed inside the expression as a string and parses it to
+    time.
+
+15. "pcap":
+    Retrieves time found in pcap file type
+
+16. "fsdb_dns":
+    Retrieves time found in the *first* column of an fsdb-formatted,
+    tab-delimited file.  At the moment, this indexer does not read the fsdb
+    header; it simply ignores it (along with any comments).
+
+    If you're getting errors with reading timestamps, check to make sure the
+    file is tab-delimited.
