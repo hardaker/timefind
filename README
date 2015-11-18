@@ -1,64 +1,19 @@
-Retro-Future
-============
+timefind / indexer
+==================
 
-This is the general Retro-Future codebase. There are multiple projects
-contained in this repository, mostly written in Go. Please read this
-file if you're planning to compile or commit any changes.
+indexer and timefind are tools to handle the indexing and selection of
+multiple network data types in a given time range.
 
-Since the Go toolchain is still relatively young, every project has a
-different way of managing builds and dependencies.
+The latest version can be found at http://ant.isi.edu/software/timefind.
 
-The main programs are `timefind' and `indexer'.
+Copyright and license can be found in the files COPYRIGHT and LICENSE.
+
+Please send email to calvin@isi.edu with questions, bugs, feature
+requests, patches, and any notes on your usage.
 
 Getting Started
 ===============
 
-1. Make sure you have Go (version 1.5 or greater) installed
-
-2. Run `make install'
-
-3. Binaries will be located in "bin/".
-
-4. Read the README files in "bin/".
-
-Dependency Management
-=====================
-
-Starting with Go 1.5, external dependencies can be stored in a "vendor/"
-directory without having to rewrite the import path.
-
-For example, if "src/example/main.go" imports
-"github.com/third-party-pkg", Go will look for and import the longest
-path containing "github.com/third-party-pkg".
-
-In the case of Retro-Future, we place all external dependencies in
-"src/vendor/" since most of them are used by multiple packages.
-
-Directory structure:
-
-    retro-future-code/
-        src/
-            example/main.go
-            vendor/
-                vendor.json
-                github.com/third-party-pkg/
-                github.com/another-third-party-pkg/
-
-When compiling, you need to make sure that the right environment
-variables are set:
-
-    export GO15VENDOREXPERIMENT=1
-    export GOPATH=/path/to/retro-future-code/
-
-(An environment setup script is forthcoming.)
-
-Finally, dependencies can have their versions pinned to a particular
-commit, to ensure consistent builds. Many dependency managers exist and
-one is likely to be implemented in Go 1.6+. For now, versions will be
-maintained by hand.
-
-References:
-* http://jbeckwith.com/2015/05/29/dependency-management-go/
-* http://stackoverflow.com/questions/30300279/
-* https://github.com/kardianos/vendor-spec
-* https://groups.google.com/forum/#!topic/golang-dev/nMWoEAG55v8%5B1-25%5D
+1. Install Go (v1.5+)
+2. Run `make'
+3. Binaries and specific READMEs will be located in 'bin/'
