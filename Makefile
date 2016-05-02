@@ -1,6 +1,6 @@
 .PHONY: build check-version
 
-VERSION=1.0.2.3
+VERSION=1.0.2.4
 DESTDIR=
 PREFIX=$(DESTDIR)/usr
 BINDIR=$(PREFIX)/bin
@@ -39,6 +39,7 @@ install_programs: bin/timefind bin/timefind_indexer
 	-mkdir -p $(BINDIR)
 	cp ./bin/timefind $(BINDIR)
 	cp ./bin/timefind_indexer $(BINDIR)/timefind_indexer
+	cp ./src/timefind_lander_indexer/timefind_lander_indexer $(BINDIR)
 
 install_READMEs:
 	-mkdir -p $(DOCDIR)
@@ -58,7 +59,10 @@ clean:
 TV=timefind-$(VERSION)
 tar.gz:
 	ln -s . $(TV)
-	tar czvf timefind-$(VERSION).tar.gz $(TV)/CHANGELOG $(TV)/CONTRIBUTORS $(TV)/COPYRIGHT $(TV)/LICENSE $(TV)/Makefile $(TV)/README $(TV)/src/indexer $(TV)/src/timefind $(TV)/src/vendor $(TV)/src/urutil
+	tar czvf timefind-$(VERSION).tar.gz $(TV)/CHANGELOG $(TV)/CONTRIBUTORS $(TV)/COPYRIGHT $(TV)/LICENSE \
+		$(TV)/Makefile $(TV)/README \
+		$(TV)/src/indexer $(TV)/src/timefind $(TV)/src/vendor $(TV)/src/urutil \
+		$(TV)/src/timefind_lander_indexer
 	rm -f $(TV)
 
 RPM_DIST=$(shell rpm --eval '%{dist}')
@@ -67,6 +71,16 @@ rpms:
 	cp timefind-$(VERSION).tar.gz $$HOME/rpmbuild/SOURCES
 	cp timefind.spec  $$HOME/rpmbuild/SPECS
 	( cd $$HOME/rpmbuild; rpmbuild -ba SPECS/timefind.spec; )
+	cp $$HOME/rpmbuild/RPMS/x86_64/timefind-$(VERSION)-1$(RPM_DIST).x86_64.rpm .
+	cp $$HOME/rpmbuild/SRPMS/timefind-$(VERSION)-1$(RPM_DIST).src.rpm .
 
 #cp $$HOME/rpmbuild/RPMS/noarch/timefind-$(VERSION)-1$(RPM_DIST).noarch.rpm .
 #	cp $$HOME/rpmbuild/SRPMS/timefind-$(VERSION)-1$(RPM_DIST).src.rpm .
+
+RELEASE_FILES=timefind-$(VERSION).tar.gz \
+		timefind-$(VERSION)-1$(RPM_DIST).x86_64.rpm \
+		timefind-$(VERSION)-1$(RPM_DIST).src.rpm
+release:
+	cp $(RELEASE_FILES) $$HOME/WORKING/ANT/WWW/ant_2015/software/timefind
+	cd $$HOME/WORKING/ANT/WWW/ant_2015/software/timefind && git add $(RELEASE_FILES)
+

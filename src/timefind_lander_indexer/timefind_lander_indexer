@@ -1,0 +1,167 @@
+#!/usr/bin/perl -w
+
+#
+# timefind_lander_indexer
+# $Id$
+#
+# Copyright (C) 2015-2016 University of Southern California.
+# All rights reserved.
+#
+# Full copyright is at the end of this file.
+#                                                                
+
+
+=head1 NAME
+
+timefind_lander_indexer - build a timefind index of LANDER files
+
+=head1 SYNOPSIS
+
+timefind_lander_indexer [dir...]
+
+=head1 DESCRIPTION
+
+Look at files in a directory in the pattern
+
+    20151210-000537-00190258.pcap.xz
+
+or
+
+    20151210-000537-00190258.some_other_string
+
+Where the first two numeric fields are the date and time (in UTC)
+and the third numeric field is a sequence number.
+
+Write a timefind index to standard output in the format
+
+    pathname,starttime,endtime
+
+Where times are in Unix epoch seconds in UTC timezone
+and endtime is deteremined the starttime of the next file.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-d>
+
+Enable debugging output.
+
+=item B<-v>
+
+Enable verbose output.
+
+=item B<--help>
+
+Show help.
+
+=item B<--man>
+
+Show full manual.
+
+=back
+
+=cut
+
+use strict;
+use Pod::Usage;
+use Getopt::Long;
+use DateTime;
+
+Getopt::Long::Configure ("bundling");
+pod2usage(2) if ($#ARGV >= 0 && $ARGV[0] eq '-?');
+#my(@orig_argv) = @ARGV;
+my($prog) = $0;
+my $debug = undef;
+my $verbose = undef;
+&GetOptions(
+ 	'help|?' => sub { pod2usage(1); },
+	'man' => sub { pod2usage(-verbose => 2); },
+	'd|debug+' => \$debug,   
+        'v|verbose+' => \$verbose) or pod2usage(2);
+pod2usage("$prog: no directories given.\n") if ($#ARGV < 0);
+
+
+sub check_dir {
+    my($dir) = @_;
+    my $failures = 0;
+
+    opendir(DIR, "$dir") or die "$0: cannot open $dir\n";
+    # buffer them so we don't depend on sorting order (from readdir or digits)
+    my(@seqnos, %files, %epoch_times);
+    my(@files) = readdir(DIR);
+    die "$0: cannot readdir $dir\n" if ($#files == -1);
+    foreach (@files) {
+	next if (/^\./);
+	my($date, $time, $seqno) = ($_ =~ /^(\d+)\D(\d+)\D(\d+)\./);
+	next if (!defined($date) || !defined($seqno));
+	$seqno += 0;   # force numeric
+	push(@seqnos, $seqno);
+	# date
+	my($yyyy, $mm, $dd) = ($date =~ /^(\d{4})(\d{2})(\d{2})$/);
+	my($HH, $MM, $SS) = ($time =~ /^(\d{2})(\d{2})(\d{2})$/);
+	my($dt) = DateTime->new(year => $yyyy, month => $mm, day => $dd,
+				hour => $HH, minute => $MM, second => $SS,
+				time_zone => 'UTC');
+	$epoch_times{$seqno} = $dt->epoch;
+	$files{$seqno} = $_;
+    };
+    close DIR;
+
+    #
+    # check
+    #
+    die "not enough files\n" if ($#seqnos < 1);
+    @seqnos = sort { $a <=> $b } @seqnos;
+    my $longest_duration = $epoch_times{$seqnos[1]} - $epoch_times{$seqnos[0]};
+    foreach (0..$#seqnos) {
+	my($si) = $seqnos[$_];
+	my $epoch_beg = $epoch_times{$seqnos[$_]};
+	my $epoch_end;
+	if ($_ == $#seqnos) {
+	    # We don't know the actual length of the last file because
+	    # it ends in the next directory.  Fake it as 2x the longest we've seen,
+	    # which should only fail under extraordinary circumstances.
+	    $epoch_end = $epoch_beg + 2 * $longest_duration;
+	} else {
+	    $epoch_end = $epoch_times{$seqnos[$_+1]};
+	    my ($this_duration) = $epoch_end - $epoch_beg;
+	    $longest_duration = $this_duration if ($this_duration > $longest_duration);
+	};
+	print join(',', "$dir/$files{$si}", $epoch_beg, $epoch_end), "\n";
+    };
+    return 0;
+}
+
+foreach (@ARGV) {
+    check_dir($_);
+};
+
+exit 0;
+
+=head1 AUTHOR
+
+John Heidemann
+
+=head1 COPYRIGHT
+
+Copyright (C) 2015-2016 University of Southern California.
+All rights reserved.                                            
+                                                                
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License,
+version 2, as published by the Free Software Foundation.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+
+=cut
+    
+
+
