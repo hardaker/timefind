@@ -36,6 +36,23 @@ func TestUnmarshalFromUnixTime(t *testing.T) {
 	}
 }
 
+func TestUnmarshalFromUnixTimeWithoutNanosecondPrecision(t *testing.T) {
+	unixTime = true
+	d := []byte("1436917977")
+	du, err := UnmarshalText(d)
+	if err != nil {
+		t.Error("Error unmarshaling text: ", err)
+	}
+
+	if du.Unix() != 1436917977 {
+		t.Error("Expected 1436917977, got ", du.Unix())
+	}
+
+	if du.Nanosecond() != 0 {
+		t.Error("Expected 0, got ", du.Nanosecond())
+	}
+}
+
 // Make sure that the output of urutil.MarshalText(t) is the same as
 // t.MarshalText()
 func TestMarshalToTime(t *testing.T) {

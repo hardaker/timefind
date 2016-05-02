@@ -874,7 +874,7 @@ func process_pcap(filename string) (times urutil.Times, err error) {
 // XXX assumes tab-delimited files!
 /*
 
-  file format as follows:
+  file format (fsdb_time_col_1) as follows:
 
   #fsdb -F t epoch_time client_ip client_port qid query
   # includes arpa.
@@ -882,8 +882,24 @@ func process_pcap(filename string) (times urutil.Times, err error) {
   1430438418.158835       10.2.3.5        54108   45531-  0.0.0.0.in-addr.arpa.
   1430438418.161626       10.2.3.6        56029   34082-  0.0.0.0.in-addr.arpa.
 
+  file format (fsdb_time_col_2) as follows:
+
+  #fsdb -F t msgid epoch_time client_ip client_port qid query
+  1  1430438418.154034       10.2.3.4        36347   43595-  0.0.0.0.in-addr.arpa.
+  2  1430438418.158835       10.2.3.5        54108   45531-  0.0.0.0.in-addr.arpa.
+  3  1430438418.161626       10.2.3.6        56029   34082-  0.0.0.0.in-addr.arpa.
+
 */
-func process_fsdb_dns(filename string) (times urutil.Times, err error) {
+
+func process_fsdb_time_col_1(filename string) (times urutil.Times, err error) {
+	return process_fsdb(filename, 1)
+}
+
+func process_fsdb_time_col_2(filename string) (times urutil.Times, err error) {
+	return process_fsdb(filename, 2)
+}
+
+func process_fsdb(filename string, col int) (times urutil.Times, err error) {
 
 	var reader io.Reader
 
@@ -929,12 +945,12 @@ func process_fsdb_dns(filename string) (times urutil.Times, err error) {
 			continue
 		}
 
-		// only want the first column
-		ts := strings.SplitN(line, "\t", 2)[0]
+		// only want the column # "col"
+		ts := strings.SplitN(line, "\t", col + 1)[col - 1]
 
 		// convert unixtimestamp into golang time
 		// accepts both second and nanosecond precision
-		tm, err := urutil.UnixTimeToGoTime([]byte(ts))
+		tm, err := urutil.UnmarshalText([]byte(ts))
 		if err != nil {
 			return times, err
 		}
@@ -1022,8 +1038,10 @@ func main() {
 			processor = process_cpp
 		case "email":
 			processor = process_email
-		case "fsdb_dns":
-			processor = process_fsdb_dns
+		case "fsdb_time_col_1":
+			processor = process_fsdb_time_col_1
+		case "fsdb_time_col_2":
+			processor = process_fsdb_time_col_2
 		case "iod":
 			processor = process_iod
 		case "juniper":
@@ -1042,6 +1060,9 @@ func main() {
 			processor = process_win_messages
 		case "wireless":
 			processor = process_wireless
+		default:
+			processor = nil
+			log.Fatalf("invalid 'data_type' = '%s'\n", dataSource.Type);
 		}
 
 		log.Printf("Moving to section %s", sectionName)

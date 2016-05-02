@@ -1,0 +1,45 @@
+Dependencies and Building
+=========================
+
+Dependencies should be pinned, so you should no longer have to pull
+dependencies.
+
+If you find that a dependency version should be updated, please check with the
+Retro-Future mailing list to ensure compatibility.
+
+1. Set your GOPATH (see `go help gopath').
+   A reasonable default for retro-future is:
+
+    export GOPATH=/path/to/retro-future-code/
+
+2. Build packages.
+
+   Currently you'll have you cd into each package you'd like to build and run
+   `go build`. 
+
+   For example, to build `indexer`:
+
+    cd retro-future-code/src/indexer
+    go build
+    ./indexer -h
+
+    Usage: indexer [-huv] [-c PATH]
+     -c, --config=PATH  Path to configuration file (can be used multiple times)
+     -h, --help         Show this help message and exit
+     -u, --unixtime     write Unix time to indexes instead of RFC 3339
+     -v, --verbose      Verbose progress indicators and messages
+
+3. Build configuration file. (e.g., SOURCENAME.conf.json)
+
+4. Run indexer.
+
+   After building your configuration file, you can run the indexer:
+
+    ./indexer -c SOURCENAME.conf.json
+
+Dependencies
+============
+
+    go get woozle.org/neale/g.cgi/net/go-pcap.git
+    go get xi2.org/x/xz
+    go get github.com/pborman/getopt

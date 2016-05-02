@@ -1,0 +1,41 @@
+
+notes on timestamps
+
+2015-Jul-16
+===========
+
+currently urface uses ISO date formats with nanosecond precision:
+
+  data.gz,2015-07-14T23:52:57.001325Z,2015-07-14T23:52:57.072055Z
+
+  $ date -d '2015-07-14T23:52:57.001325Z' +%s
+  1436917977
+
+  $ date -d '2015-07-14T23:52:57.001325Z' +%s.%N
+  1436917977.001325000
+
+  $ date -d '2015-07-14T23:52:57.072055Z' +%s.%N
+  1436917977.072055000
+
+timefind will _present_ nanosecond precision, but does not actually use it:
+
+  $ bin/timefind query dns_yellow --times
+  data.gz        1436917977.00000 1437090777.0000
+
+which, for some edgecases, would be problematic. 
+
+in this case, our very short file does not end at 1437090777.0000.
+
+Thus we either need to round up if we remain at the "seconds" granularity, or
+include nanosecond precision.
+
+2015-Jul-17
+===========
+
+By default, urface will generate an index using RFC3339Nano format:
+
+  data.gz,2015-07-14T23:52:57.001325Z,2015-07-14T23:52:57.072055Z
+
+If you set the -unixtime flag ("urface -unixtime"), the index is:
+
+  data.gz,1436917977.001325000,1436917977.072055000
