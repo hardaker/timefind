@@ -1,6 +1,6 @@
-.PHONY: build check-version
+.PHONY: build check-version symlink-vendor
 
-VERSION=1.0.2.4
+VERSION=1.0.2.5
 DESTDIR=
 PREFIX=$(DESTDIR)/usr
 BINDIR=$(PREFIX)/bin
@@ -9,19 +9,40 @@ DOCDIR=$(DESTDIR)/usr/share/timefind-$(VERSION)
 export GOPATH := ${PWD}
 export GO15VENDOREXPERIMENT := 1
 
-all::
+SYMLINK_VENDOR=0
+VENDOR_DIRS=
+
+all:: check-version symlink-vendor bin/timefind bin/timefind_indexer symlink-clean
 
 check-version:
 	@go version > /dev/null || (echo "Go not found. You need to install go: http://golang.org/doc/install"; false)
-	@go version | grep -q 'go version go1.[5-9]' || (echo "Go version 1.5.x (or higher) is required: http://golang.org/doc/install"; false)
+ifneq ($(OLDGO),1)
+	$(eval GOVERSION := $(shell go version | egrep -o 'go1.[0-9](.[0-9])?' | sed 's/go//'))
+	@go version | grep -q 'go version go1.[5-9]' || \
+		(echo "go1.5 (or higher) is recommended, you are running go$(GOVERSION)"; \
+		 echo "Run \"make OLDGO=1\" to compile using go$(GOVERSION)"; false)
+endif
 
-all:: bin/timefind bin/timefind_indexer
+symlink-vendor:
+ifeq ($(OLDGO),1)
+	$(eval VENDOR_DIRS := $(sort $(dir $(filter %/, $(wildcard ./src/vendor/*/)))))
+	@$(foreach dir, $(VENDOR_DIRS), \
+		echo "creating symlink from ./src/$(notdir $(dir:%/=%)) to $(dir)"; \
+		ln -f -s vendor/$(notdir $(dir:%/=%)) ./src/$(notdir $(dir:%/=%));)
+endif
 
 bin/timefind:
 	go build -o ./bin/timefind ./src/timefind
 
 bin/timefind_indexer:
 	go build -o ./bin/timefind_indexer ./src/indexer
+
+symlink-clean:
+ifeq ($(OLDGO),1)
+	@$(foreach dir, $(VENDOR_DIRS), \
+		echo "removing symlink from ./src/$(notdir $(dir:%/=%))"; \
+		rm ./src/$(notdir $(dir:%/=%));)
+endif
 
 # build is really "install.local"
 # and for if you run locally
@@ -83,4 +104,5 @@ RELEASE_FILES=timefind-$(VERSION).tar.gz \
 release:
 	cp $(RELEASE_FILES) $$HOME/WORKING/ANT/WWW/ant_2015/software/timefind
 	cd $$HOME/WORKING/ANT/WWW/ant_2015/software/timefind && git add $(RELEASE_FILES)
+	mv $(RELEASE_FILES) RELEASE
 
