@@ -1,6 +1,16 @@
 .PHONY: build check-version symlink-vendor
 
-VERSION=1.0.2.5
+SHELL=/bin/bash
+
+#
+# XXX make sure to tag your releases! See CONTRIBUTING.
+#
+VERSION=$(shell git describe --tags --abbrev=0)
+VERSION_FULL=$(shell git describe --tags)
+
+# test equality
+VERSION_MATCH=$(shell ([ "$(VERSION)" == "$(VERSION_FULL)" ] && echo "1") || echo "0")
+
 DESTDIR=
 PREFIX=$(DESTDIR)/usr
 BINDIR=$(PREFIX)/bin
@@ -31,11 +41,14 @@ ifeq ($(OLDGO),1)
 		ln -f -s vendor/$(notdir $(dir:%/=%)) ./src/$(notdir $(dir:%/=%));)
 endif
 
-bin/timefind:
+test:
+	pushd src/timefind; go test ./...
+
+bin/timefind: clean
 	go build -o ./bin/timefind ./src/timefind
 
-bin/timefind_indexer:
-	go build -o ./bin/timefind_indexer ./src/indexer
+bin/timefind_indexer: clean
+	go build -o ./bin/timefind_indexer ./src/timefind/indexer
 
 symlink-clean:
 ifeq ($(OLDGO),1)
@@ -79,12 +92,29 @@ clean:
 #
 TV=timefind-$(VERSION)
 tar.gz:
+ifneq ($(VERSION_MATCH),1)
+	$(error Repository tag is "$(VERSION_FULL)"! Expecting something like "$(VERSION)". Did you properly tag your release? (See CONTRIBUTING for more information))
+
+else
 	ln -s . $(TV)
-	tar czvf timefind-$(VERSION).tar.gz $(TV)/CHANGELOG $(TV)/CONTRIBUTORS $(TV)/COPYRIGHT $(TV)/LICENSE \
-		$(TV)/Makefile $(TV)/README \
-		$(TV)/src/indexer $(TV)/src/timefind $(TV)/src/vendor $(TV)/src/urutil \
-		$(TV)/src/timefind_lander_indexer
+	tar \
+		--transform='flags=r;s|README\.timefind|README|' \
+		--exclude "$(TV)/src/timefind/timefind" \
+		--exclude "$(TV)/src/timefind/indexer/indexer" \
+		--exclude "$(TV)/src/timefind/indexer/tests" \
+		--exclude "$(TV)/src/vendor/xi2.org/x/xz/testdata" \
+		-czvf timefind-$(VERSION).tar.gz \
+		$(TV)/CHANGELOG \
+		$(TV)/CONTRIBUTORS \
+		$(TV)/COPYRIGHT \
+		$(TV)/LICENSE \
+		$(TV)/Makefile \
+		$(TV)/README.timefind \
+		$(TV)/src/timefind \
+		$(TV)/src/timefind_lander_indexer \
+		$(TV)/src/vendor
 	rm -f $(TV)
+endif
 
 RPM_DIST=$(shell rpm --eval '%{dist}')
 

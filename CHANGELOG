@@ -1,3 +1,23 @@
+2016-09-23  Calvin Ardi  <calvin@isi.edu>
+
+    * v1.0.2.5 -> v1.0.3
+
+    * New file processors: FSDB, syslog, and BGP/MRT, CSV.
+      (Calvin, Paige)
+
+    * Source code tree has been reorganized and cleaned up. (Paul)
+
+    * timefind and indexer now support traversing the file hierarchy
+      with recursive processing with no additional configuration
+      needed. (Paul, Paige, Calvin)
+
+    * Index entries now have a 4th column with a "last modified at"
+      timestamp: indexer will re-index an existing entry if a file
+      was modified after index creation.
+
+    * Index timestamps are written in Unix timestamp format by default.
+
+
 2015-10-22  Calvin Ardi  <calvin@isi.edu>
 
     * v1.0.2.1 -> v1.0.2.2

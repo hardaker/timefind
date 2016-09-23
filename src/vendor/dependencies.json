@@ -1,6 +1,10 @@
 {
     "Deps": [
         {
+            "ImportPath": "github.com/kaorimatz/go-mrt",
+            "Rev": "619828fef149b6389d59333020a5384c688a37e9"
+        },
+        {
             "ImportPath": "github.com/pborman/getopt",
             "Rev": "3b137f113d82e0851ddf701b7c6dde5e58d417f2"
         },

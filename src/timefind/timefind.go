@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"urutil"
+	"timefind/config"
+	"timefind/index"
+	tf_time "timefind/time"
 
 	"github.com/pborman/getopt"
 )
@@ -20,6 +22,7 @@ var verbose bool = false
 var beginTimestamp string
 var endTimestamp string
 var listTimes bool = false
+var humanTimes bool = false
 
 var timeLayouts = []string{
 	time.RFC3339Nano,
@@ -74,6 +77,7 @@ func main() {
 	getopt.StringVarLong(&beginTimestamp, "begin", 'b', "Begin interval at timestamp", "TIMESTAMP")
 	getopt.StringVarLong(&endTimestamp, "end", 'e', "End interval at timestamp", "TIMESTAMP")
 	getopt.BoolVarLong(&listTimes, "times", 't', "Output the start and end time for each path")
+	getopt.BoolVarLong(&humanTimes, "human", 'T', "Output human-readable start and end time for each path")
 	help := getopt.BoolLong("help", 'h', "Show this help message and exit")
 
 	getopt.SetParameters("SOURCE [SOURCE ...]")
@@ -85,8 +89,8 @@ func main() {
 			`
 TIMESTAMP must be in one of the following formats:
 
- RFC3339Nano	e.g., 2006-01-02T15:04:05.999999999Z07:00
- RFC3339	e.g., 2006-01-02T15:04:05Z07:00
+ RFC3339Nano	e.g., 2006-01-02T15:04:05.999999999-07:00
+ RFC3339	e.g., 2006-01-02T15:04:05-07:00
  YYYY-MM-DD	e.g., 2006-01-02
  Unix time	e.g., 1445471780, 1234471780.372802000
 
@@ -136,25 +140,14 @@ TIMESTAMP must be in one of the following formats:
 		netflow  /a/d/e/f.csv
 	*/
 
-	for _, s := range sources {
+	for _, config_path := range sources {
 
-		// open and read configuration
-		configf, err := os.Open(s)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer configf.Close()
-
-		cfg, err := urutil.ReadConfiguration(configf)
+		cfg, err := config.NewConfiguration(config_path)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// section name is "SOURCE" in "SOURCE.conf.json"
-		section := s[strings.LastIndex(s, "/")+1 : strings.LastIndex(s, ".conf.json")]
-		vlog("looking for section = %s\n", section)
-
-		idx, err := cfg.NewIndex(section)
+		idx, err := index.NewIndex(cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -174,17 +167,23 @@ TIMESTAMP must be in one of the following formats:
 			latest = time.Unix(math.MaxInt32, 0)
 		}
 
-		vlog("timestamp begin: %s, end: %s\n", earliest, latest)
+		vlog("searching for files with timestamp begin: %s, end: %s\n", earliest, latest)
 
-		var matches []string
-		if listTimes {
-			matches = idx.FindLogsByTimeRangeWithTimes(earliest, latest)
-		} else {
-			matches = idx.FindLogsByTimeRange(earliest, latest)
-		}
-
-		for _, fn := range matches {
-			fmt.Println(fn)
+		// Recursively find matching logs in the index within the index tree
+		for _, entry := range idx.FindLogs(earliest, latest) {
+			if listTimes || humanTimes {
+				if humanTimes {
+					earliest, _ := (entry.Period.Earliest).MarshalText()
+					latest, _ := (entry.Period.Latest).MarshalText()
+					fmt.Printf("%s %s %s\n", entry.Path, earliest, latest)
+				} else {
+					earliest, _ := tf_time.MarshalTime(entry.Period.Earliest)
+					latest, _ := tf_time.MarshalTime(entry.Period.Latest)
+					fmt.Printf("%s %s %s\n", entry.Path, earliest, latest)
+				}
+			} else {
+				fmt.Println(entry.Path)
+			}
 		}
 	}
 }

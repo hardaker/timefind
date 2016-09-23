@@ -1,43 +1,53 @@
-package main
+package processor
 
 import (
 	"bufio"
+	"compress/bzip2"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"log"
 	"os"
-	"path"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
-	"urutil"
 
-	"github.com/pborman/getopt"
+	tf_time "timefind/time"
+
+	mrt "github.com/kaorimatz/go-mrt"
 	"woozle.org/neale/g.cgi/net/go-pcap.git"
 	"xi2.org/x/xz"
 )
 
-//
-// Command-line arguments
-//
-// TODO should probably put these in a struct?
-var configPaths []string = []string{}
-var verbose bool = false
+// An internal counter for debugging purposes
+var counter int
 
-// This is being used as a global counter for printing.
-// TODO redo this in a better way.
-var i int
+// The processor functions are defined in the processors module
+type ProcessFunction func(filename string) (tf_time.Times, error)
 
-func process_cpp(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+var Processors map[string]ProcessFunction = map[string]ProcessFunction{
+	"bluecoat":        process_bluecoat,
+	"bomgar":          process_bomgar,
+	"cer":             process_cer,
+	"codevision":      process_codevision,
+	"cpp":             process_cpp,
+	"email":           process_email,
+	"fsdb_time_col_1": process_fsdb_time_col_1,
+	"fsdb_time_col_2": process_fsdb_time_col_2,
+	"iod":             process_iod,
+	"juniper":         process_juniper,
+	"mrt":             process_mrt,
+	"pcap":            process_pcap,
+	"sep":             process_sep,
+	"snare":           process_snare,
+	"stealthwatch":    process_stealthwatch,
+	"syslog_rfc3164":  process_syslog_rfc3164,
+	"text":            process_text,
+	"win_messages":    process_win_messages,
+	"wireless":        process_wireless,
+}
 
+func process_cpp(filename string) (times tf_time.Times, err error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return times, err
@@ -67,13 +77,7 @@ func process_cpp(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_bomgar(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_bomgar(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 
 	f, err := os.Open(filename)
@@ -115,13 +119,7 @@ func process_bomgar(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_bluecoat(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_bluecoat(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 	f, err := os.Open(filename)
 	if err != nil {
@@ -169,13 +167,7 @@ func process_bluecoat(filename string) (times urutil.Times, err error) {
 	return times, err
 }
 
-func process_codevision(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_codevision(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 
 	f, err := os.Open(filename)
@@ -219,13 +211,7 @@ func process_codevision(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_cer(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_cer(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 
 	f, err := os.Open(filename)
@@ -264,13 +250,7 @@ func process_cer(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_sep(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_sep(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 	var str string
 	var s string
@@ -355,13 +335,7 @@ func process_sep(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_juniper(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
-
+func process_juniper(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 
 	f, err := os.Open(filename)
@@ -426,12 +400,7 @@ func process_juniper(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_email(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_email(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -471,12 +440,7 @@ func process_email(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_text(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_text(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -502,6 +466,7 @@ func process_text(filename string) (times urutil.Times, err error) {
 			return times, err
 		}
 		str := r.FindString(line)
+		//log.Printf("%s\n", str)
 		if str != "" {
 			t, _ := time.Parse("Jan 2 2006 15:04:05", str)
 			if times.Earliest.IsZero() || t.Before(times.Earliest) {
@@ -533,12 +498,7 @@ func process_text(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_snare(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_snare(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -587,12 +547,7 @@ func process_snare(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_iod(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_iod(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -629,12 +584,7 @@ func process_iod(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_win_messages(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_win_messages(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -681,12 +631,7 @@ func process_win_messages(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_wireless(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_wireless(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -758,12 +703,7 @@ func process_wireless(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_stealthwatch(filename string) (times urutil.Times, err error) {
-	i += 1
-	if i == 10 {
-		log.Println(filename)
-		i = 0
-	}
+func process_stealthwatch(filename string) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -800,14 +740,7 @@ func process_stealthwatch(filename string) (times urutil.Times, err error) {
 	return times, nil
 }
 
-func process_pcap(filename string) (times urutil.Times, err error) {
-	i += 1
-	// TODO remove this from all processors
-	/*if i == 10 {
-		log.Println(filename)
-		i = 0
-	}*/
-
+func process_pcap(filename string) (times tf_time.Times, err error) {
 	var reader io.Reader
 
 	f, err := os.Open(filename)
@@ -891,15 +824,15 @@ func process_pcap(filename string) (times urutil.Times, err error) {
 
 */
 
-func process_fsdb_time_col_1(filename string) (times urutil.Times, err error) {
+func process_fsdb_time_col_1(filename string) (times tf_time.Times, err error) {
 	return process_fsdb(filename, 1)
 }
 
-func process_fsdb_time_col_2(filename string) (times urutil.Times, err error) {
+func process_fsdb_time_col_2(filename string) (times tf_time.Times, err error) {
 	return process_fsdb(filename, 2)
 }
 
-func process_fsdb(filename string, col int) (times urutil.Times, err error) {
+func process_fsdb(filename string, col int) (times tf_time.Times, err error) {
 
 	var reader io.Reader
 
@@ -946,11 +879,11 @@ func process_fsdb(filename string, col int) (times urutil.Times, err error) {
 		}
 
 		// only want the column # "col"
-		ts := strings.SplitN(line, "\t", col + 1)[col - 1]
+		ts := strings.SplitN(line, "\t", col+1)[col-1]
 
 		// convert unixtimestamp into golang time
 		// accepts both second and nanosecond precision
-		tm, err := urutil.UnmarshalText([]byte(ts))
+		tm, err := tf_time.UnmarshalTime([]byte(ts))
 		if err != nil {
 			return times, err
 		}
@@ -966,133 +899,162 @@ func process_fsdb(filename string, col int) (times urutil.Times, err error) {
 	return times, err
 }
 
-func main() {
-	getopt.ListVarLong(&configPaths, "config", 'c',
-		"REQUIRED: Path to configuration file (can be used multiple times)", "PATH")
-	getopt.BoolVarLong(&verbose, "verbose", 'v', "Verbose progress indicators and messages")
-	help := getopt.BoolLong("help", 'h', "Show this help message and exit")
-	getopt.SetParameters("")
-	getopt.Parse()
+// http://www.ietf.org/rfc/rfc3164.txt
+//
+/* 4.1.2 HEADER Part of a syslog Packet
 
-	if *help {
-		getopt.Usage()
-		os.Exit(0)
+   The TIMESTAMP field is the local time and is in the format of "Mmm dd
+   hh:mm:ss" (without the quote marks) where:
+
+     Mmm is the English language abbreviation for the month of the
+     year with the first character in uppercase and the other two
+     characters in lowercase.  The following are the only acceptable
+     values:
+
+     Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
+
+     dd is the day of the month.  If the day of the month is less
+     than 10, then it MUST be represented as a space and then the
+     number.  For example, the 7th day of August would be
+     represented as "Aug  7", with two spaces between the "g" and
+     the "7".
+
+     hh:mm:ss is the local time.  The hour (hh) is represented in a
+     24-hour format.  Valid entries are between 00 and 23,
+     inclusive.  The minute (mm) and second (ss) entries are between
+     00 and 59 inclusive.
+*/
+func process_syslog_rfc3164(filename string) (times tf_time.Times, err error) {
+	// TODO add a parameter to specify year and timezone
+	//
+	// XXX year := 0000
+	// XXX tz := Zulu
+
+	// 012345678901234
+	// Mmm dd hh:mm:ss
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return times, err
+	}
+	defer f.Close()
+
+	reader, err := OpenFile(f)
+	if err != nil {
+		log.Printf("error is getting an io.Reader: %s", err)
+		return times, err
 	}
 
-	if len(configPaths) == 0 {
-		log.Printf("no configuration (-c/--config) found")
-		getopt.Usage()
-		os.Exit(1)
+	// now process files
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		// read line
+		line := scanner.Text()
+		ts := line[:15]
+
+		// from "time":
+		//   Stamp      = "Jan _2 15:04:05"
+		t, err := time.Parse(time.Stamp, ts)
+		if err != nil {
+			return times, err
+		}
+
+		if times.Earliest.IsZero() || t.Before(times.Earliest) {
+			times.Earliest = t
+		}
+		if times.Latest.IsZero() || t.After(times.Latest) {
+			times.Latest = t
+		}
+	}
+	if err = scanner.Err(); err != nil {
+		log.Printf("reading input: ", err)
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	// XXX until Go 1.5, we need to specify number of max processes
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	log.Printf("setting GOMAXPROCS = NumCPU = %d\n", runtime.NumCPU())
-
-	for _, configPath := range configPaths {
-
-		configf, err := os.Open(configPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer configf.Close()
-
-		cfg, err := urutil.ReadConfiguration(configf)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		i = 0
-
-		sectionName := configPath[
-			strings.LastIndex(configPath, "/")+1:
-			strings.LastIndex(configPath, ".conf.json")]
-		dataSource := cfg
-
-		// start processing
-		var processor urutil.ProcessFunction
-
-		indexFilename := fmt.Sprintf("%s.csv", sectionName)
-		indexPathname := path.Join(cfg.IndexDir, indexFilename)
-
-		idx, err := urutil.NewIndex(indexPathname)
-		if err != nil {
-			log.Printf("creating NewIndex: %s\n", err)
-			continue
-		}
-
-		switch dataSource.Type {
-		case "":
-			continue
-		case "bluecoat":
-			processor = process_bluecoat
-		case "bomgar":
-			processor = process_bomgar
-		case "cer":
-			processor = process_cer
-		case "codevision":
-			processor = process_codevision
-		case "cpp":
-			processor = process_cpp
-		case "email":
-			processor = process_email
-		case "fsdb_time_col_1":
-			processor = process_fsdb_time_col_1
-		case "fsdb_time_col_2":
-			processor = process_fsdb_time_col_2
-		case "iod":
-			processor = process_iod
-		case "juniper":
-			processor = process_juniper
-		case "pcap":
-			processor = process_pcap
-		case "sep":
-			processor = process_sep
-		case "snare":
-			processor = process_snare
-		case "stealthwatch":
-			processor = process_stealthwatch
-		case "text":
-			processor = process_text
-		case "win_messages":
-			processor = process_win_messages
-		case "wireless":
-			processor = process_wireless
-		default:
-			processor = nil
-			log.Fatalf("invalid 'data_type' = '%s'\n", dataSource.Type);
-		}
-
-		log.Printf("Moving to section %s", sectionName)
-
-		results := make(chan string, 20)
-		go dataSource.Walk(results)
-
-		count := 0
-		for filename := range results {
-			//if verbose && (count%20 == 0) {
-			if verbose {
-				log.Printf("Processing file (#%d): %s", count, filename)
-			}
-			// XXX probably some opportunities to parallelize here
-			idx.CheckIn(filename, processor)
-			count += 1
-		}
-
-		log.Printf("Finished processing %d files (%s/%s).", count, sectionName, dataSource.Type)
-
-		// TODO upon SIGTERM, write out whatever we have
-		// TODO this doesn't return an error when writing index to a write-protected
-		// directory
-		err = idx.WriteOut()
-		if err != nil {
-			log.Printf("unable to write index file (source: %s): %s\n", sectionName, err)
-			continue
-		}
-		log.Printf("Wrote index (source: %s) to %s\n", sectionName, indexPathname)
-	}
+	return times, err
 }
 
-// vim: noet:ts=4:sw=4:tw=80
+func process_mrt(filename string) (times tf_time.Times, err error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return times, err
+	}
+	defer f.Close()
+
+	reader, err := OpenFile(f)
+	if err != nil {
+		log.Printf("error is getting an io.Reader: %s", err)
+		return times, err
+	}
+
+	mrtReader := mrt.NewReader(reader)
+
+	// protect ourselves from panic (due to corrupt MRT files)
+	defer func() {
+		//log.Printf("[mrt] done processing")
+		if x := recover(); x != nil {
+			log.Printf("[mrt] runtime panic: %v, processing ended early on filename: %s",
+				x, filename)
+		}
+	}()
+
+	for {
+		// grab next record
+		record, err := mrtReader.Next()
+
+		if record == nil {
+			break
+		}
+		if err != nil {
+			log.Printf("[mrt] error: %s, continuing...\n", err)
+			continue
+		}
+
+		// only care about timestamp
+		// TODO check if valid timestamp?
+		t := (*record).Timestamp()
+
+		if times.Earliest.IsZero() || t.Before(times.Earliest) {
+			times.Earliest = t
+		}
+		if times.Latest.IsZero() || t.After(times.Latest) {
+			times.Latest = t
+		}
+	}
+
+	// does this return after a panic?
+	return times, err
+}
+
+func OpenFile(f *os.File) (reader io.Reader, err error) {
+	filename := f.Name()
+	if strings.HasSuffix(filename, ".gz") {
+		// handle gzip
+		gf, err := gzip.NewReader(f)
+		if err != nil {
+			f.Seek(0, 0)
+			reader = f
+		} else {
+			reader = gf
+			defer gf.Close()
+		}
+	} else if strings.HasSuffix(filename, ".bz2") {
+		// handle bz2 -- no bzip2.Close() or error return...
+		bf := bzip2.NewReader(f)
+		reader = bf
+	} else if strings.HasSuffix(filename, ".xz") {
+		// handle xz
+		xf, err := xz.NewReader(f, 0)
+		if err != nil {
+			log.Printf("error reading .xz file = %s, skipping...\n", err)
+			return reader, err
+		} else {
+			reader = xf
+			// XXX xz has no xz.Close()
+		}
+	} else {
+		// just a plain file
+		reader = f
+	}
+
+	return reader, nil
+}

@@ -1,4 +1,4 @@
-package urutil
+package time
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ func TestMarshalToUnixTime(t *testing.T) {
 	unixTime = true
 
 	d, _ := time.Parse(time.RFC3339Nano, "2015-07-14T23:52:57.001325Z")
-	dm, _ := MarshalText(d)
+	dm, _ := MarshalTime(d)
 
 	expectedTime := []byte("1436917977.001325000")
 
@@ -22,7 +22,7 @@ func TestMarshalToUnixTime(t *testing.T) {
 func TestUnmarshalFromUnixTime(t *testing.T) {
 	unixTime = true
 	d := []byte("1436917977.001325000")
-	du, err := UnmarshalText(d)
+	du, err := UnmarshalTime(d)
 	if err != nil {
 		t.Error("Error unmarshaling text: ", err)
 	}
@@ -39,7 +39,7 @@ func TestUnmarshalFromUnixTime(t *testing.T) {
 func TestUnmarshalFromUnixTimeWithoutNanosecondPrecision(t *testing.T) {
 	unixTime = true
 	d := []byte("1436917977")
-	du, err := UnmarshalText(d)
+	du, err := UnmarshalTime(d)
 	if err != nil {
 		t.Error("Error unmarshaling text: ", err)
 	}
@@ -53,12 +53,12 @@ func TestUnmarshalFromUnixTimeWithoutNanosecondPrecision(t *testing.T) {
 	}
 }
 
-// Make sure that the output of urutil.MarshalText(t) is the same as
+// Make sure that the output of MarshalText(t) is the same as
 // t.MarshalText()
 func TestMarshalToTime(t *testing.T) {
 	unixTime = false
 	d, _ := time.Parse(time.RFC3339Nano, "2015-07-14T23:52:57.001325Z")
-	dm, _ := MarshalText(d)
+	dm, _ := MarshalTime(d)
 
 	expectedTime := "2015-07-14T23:52:57.001325Z"
 	expectedTime2, _ := d.MarshalText()
@@ -75,7 +75,7 @@ func TestMarshalToTime(t *testing.T) {
 func TestUnmarshalFromTime(t *testing.T) {
 	unixTime = false
 	dm := []byte("2015-07-14T23:52:57.001325Z")
-	cTime, err := UnmarshalText(dm)
+	cTime, err := UnmarshalTime(dm)
 
 	if err != nil {
 		t.Errorf("Error unmarshalling text: %s\n", err)

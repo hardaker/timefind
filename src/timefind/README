@@ -37,20 +37,22 @@ or equivalently,
 Usage
 =====
 
-Usage: timefind [-htuv] [-b TIMESTAMP] [-c PATH] [-e TIMESTAMP] SOURCE [SOURCE ...]
+Usage: timefind [-hTtuv] [-b TIMESTAMP] [-c PATH] [-e TIMESTAMP] SOURCE [SOURCE ...]
  -b, --begin=TIMESTAMP
                     Begin interval at timestamp
  -c, --config=PATH  Path to configuration file (can be used multiple times)
  -e, --end=TIMESTAMP
                     End interval at timestamp
  -h, --help         Show this help message and exit
+ -T, --human        Output human-readable start and end time for each path
  -t, --times        Output the start and end time for each path
  -v, --verbose      Verbose progress indicators and messages
 
-TIMESTAMPs can be formatted in the following ways:
+TIMESTAMPs must be formatted in the following ways:
 
     YYYY-MM-DD   (e.g., 2015-01-01)
-    RFC-3339     (e.g., 2003-03-01T09:08:09.525204Z)
+    RFC3339      (e.g., 2006-01-02T15:04:05Z)
+    RFC3339Nano  (e.g., 2006-01-02T15:04:05.999999999-07:00)
     Unix time    (e.g., 1302561463.372802000)
 
 Example: the following will list files that contain data for the day of
