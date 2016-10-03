@@ -11,10 +11,11 @@ VERSION_FULL=$(shell git describe --tags)
 # test equality
 VERSION_MATCH=$(shell ([ "$(VERSION)" == "$(VERSION_FULL)" ] && echo "1") || echo "0")
 
+# NOTE: DESTDIR must include a trailing /
 DESTDIR=
-PREFIX=$(DESTDIR)/usr
-BINDIR=$(PREFIX)/bin
-DOCDIR=$(DESTDIR)/share/timefind-$(VERSION)
+PREFIX=/usr
+BINDIR=$(DESTDIR)$(PREFIX)/bin
+DOCDIR=$(DESTDIR)$(PREFIX)/share/timefind-$(VERSION)
 
 export GOPATH := ${PWD}
 export GO15VENDOREXPERIMENT := 1
