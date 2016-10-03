@@ -1,0 +1,289 @@
+.TH "" "" "" "" ""
+.SH indexer
+.PP
+`indexer\[aq] reads in a configuration file describing a source and
+outputs an index in CSV format containing a list of filenames, timestamp
+of the earliest record, timestamp of the latest record, and the time
+that the file was last modified.
+.PP
+Using `timefind\[aq] in conjunction with these indexes, a user can
+downselect the number of files based on a time range.
+.SH Dependencies and Building
+.IP "1." 3
+Build configuration file.
+(e.g., SOURCENAME.conf.json) See Single Source Configuration
+File (#single-source-configuration-file).
+.IP "2." 3
+Run indexer.
+.RS 4
+.PP
+\&./indexer \-h
+.PP
+Usage: indexer [\-huv] [\-c PATH] \-c, \-\-config=PATH Path to
+configuration file (can be used multiple times) \-h, \-\-help Show this
+help message and exit \-u, \-\-unixtime write Unix time to indexes
+instead of RFC 3339 \-v, \-\-verbose Verbose progress indicators and
+messages
+.RE
+.PP
+After building your configuration file, you can run the indexer:
+.IP
+.nf
+\f[C]
+\&./indexer\ \-c\ SOURCENAME.conf.json
+\f[]
+.fi
+.SH Single Source Configuration File
+.PP
+Each distinct data source requires its own configuration file.
+The name of the configuration file (or source) will be the name of the
+index:
+.IP
+.nf
+\f[C]
+source\ name\ =>\ source\ configuration\ filename\ =>\ index\ filename
+dns\ \ \ \ \ \ \ \ \ =>\ dns.conf.json\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =>\ dns.csv
+\f[]
+.fi
+.PP
+Note that the configuration filename MUST end in ".conf.json".
+.PP
+Some example valid configuration filenames:
+.IP
+.nf
+\f[C]
+dns.conf.json
+great_pcap.conf.json
+http_traffic.conf.json
+\f[]
+.fi
+.PP
+A basic source file for DNS data (named "dns.conf.json") might look like
+this:
+.IP
+.nf
+\f[C]
+{
+\ \ \ \ "indexDir":\ "/index/pcap",
+\ \ \ \ "type":\ "pcap",
+\ \ \ \ "paths":\ ["/data/pcap"],
+\ \ \ \ "include":\ ["*.gz"],
+\ \ \ \ "exclude":\ []
+}
+\f[]
+.fi
+.PP
+The index directory ("indexDir") is where the indexed data will be
+stored.
+After the indexer has finished running, the indexes can be found in the
+in a .csv file located in "indexDir".
+.PP
+The index filename is the same as the source name.
+.PP
+Recursive directory support: When the indexer is run, the directory
+structure that is traversed when indexing "paths" is created in the
+"indexDir." One index file is created per directory.
+For directories containing subdirectories with an index file in them,
+the index file in the subdirectory is indexed and written to the
+directory currently being indexed.
+.PP
+For example, if we use the above configuration file ("dns.conf.json"),
+and the directory structure is as follows:
+.IP
+.nf
+\f[C]
+/data/pcap/
+/data/pcap/a/
+/data/pcap/a/b/
+/data/pcap/c/
+\f[]
+.fi
+.PP
+The indexes will be generated in the following format:
+.IP
+.nf
+\f[C]
+/index/pcap/example.csv
+/index/pcap/a/example.csv
+/index/pcap/a/b/example.csv
+/index/pcap/c/example.csv
+\f[]
+.fi
+.PP
+See Index Format (#index-format) for more details.
+.PP
+Each source config file has the components "type", "paths", "include",
+and "exclude".
+.PP
+"type" depends on the file format and which dates you wish to record
+from each file.
+See Data Types and Processors (#data-types-and-processors) for the types
+of data that the indexer supports.
+If you don\[aq]t see your data type listed, you will probably have to
+write a processor for it.
+.PP
+"paths" is one or more filepaths containing files that you wish to
+index.
+.PP
+"include" is a file pattern that specifies which files you wish to
+index.
+"exclude" is a file pattern specifies which files you do not want
+indexed.
+.SH Index Format
+.PP
+Indexes are in CSV format:
+.IP
+.nf
+\f[C]
+filename,begin_timestamp,end_timestamp,last_modified_time
+\f[]
+.fi
+.PP
+Timestamps are in Unix timestamp format with nanosecond precision.
+.PP
+Recursive directory support: An index can contain entries that are files
+(absolute path) or directories (relative path).
+An index entry that is a directory is a pointer to the existence of an
+index within that directory and the time range it covers.
+.PP
+A sample index file "pcap.csv":
+.IP
+.nf
+\f[C]
+2010\-01\-01,\ \ \ \ \ \ \ \ \ \ \ \ 100,\ 199,\ 9999
+2010\-01\-02,\ \ \ \ \ \ \ \ \ \ \ \ 200,\ 299,\ 9999
+/data/pcap/example.gz,\ 300,\ 302,\ 9999
+\f[]
+.fi
+.PP
+Since /data/pcap/example.gz is an absolute path, that entry references a
+particular file.
+.PP
+"2010\-01\-01" and "2010\-01\-02" are directories, which means we need
+to look into "2010\-01\-01/pcap.csv" and "2010\-01\-02/pcap.csv" to
+potentially pull out files in a given time range.
+.PP
+The index file "2010\-01\-01/pcap.csv" might look something like:
+.IP
+.nf
+\f[C]
+/data/pcap/2010\-01\-01/ab1.gz,\ 100,\ 105,\ 9999
+/data/pcap/2010\-01\-01/cd2.gz,\ 103,\ 107,\ 9999
+/data/pcap/2010\-01\-01/ef3.gz,\ 180,\ 199,\ 9999
+another_directory,\ \ \ \ \ \ \ \ \ \ \ \ 150,\ 180,\ 9999
+\f[]
+.fi
+.PP
+Again, after searching this index, if an index entry that matches our
+desired time range is a directory (denoted by a relative path), we
+traverse to that directory\[aq]s index and recursively process until we
+find the matching file entries, if any.
+.SH Data Types and Processors
+.PP
+The indexer reads data files and indexes the earliest and latest time
+found in each file.
+It has the ability to index data classified under the following
+categories:
+.IP " 1." 4
+"cpp":
+.RS 4
+.PP
+Unix timestamp is the first number listed on each line.
+Stores timestamp as a string and parses it to time.
+.RE
+.IP " 2." 4
+"bomgar": Searches for the expression "when=\[aq]Unix timestamp\[aq]" on
+each line.
+Stores timestamp as a string and parses it to time.
+.IP " 3." 4
+"bluecoat": Searches for a date of the format "YYYY\-MM\-DD HH:MM:SS" on
+each line.
+Stores date as a string and parses it to time.
+.IP " 4." 4
+"codevision": Searches for the expression
+"timestamp=YYYY\-MM\-DDTHH:MM:SS\-ZZ:ZZ" on each line.
+Stores date listed inside the expressison as a string and parses it to
+time.
+.IP " 5." 4
+"cer": Searches for the expression "receieved=\[aq]YYYY\-MM\-DD
+HH:MM:SS.SSSSSS\-ZZ:ZZ\[aq]" on each line.
+Stores date listed inside the expression as a string and parses it to
+time.
+.IP " 6." 4
+"sep": Searches for the expression "Event Time: YYYY\-MM\-DD HH:MM:SS"
+on each line.
+Stores date listed inside the expression as a string and parses it to
+time.
+If the expression is not found, indexer searches for the expression
+"Begin: YYYY\-MM\-DD HH:MM:SS" on each line.
+The date listed inside the expression is stored as a string and is
+parsed to a time.
+If the expression is not found, indexer uses the time listed at the
+beginning of each line.
+This time is either of the format "Jan 2 2006 15:04:05" or the format
+"Jan 2 15:04:05"
+.IP " 7." 4
+"juniper": Searches for a date of the format "YYYY\-MM\-DD HH:MM:SS" on
+each line.
+Stores date as a string and parses it to time.
+If a date of this format is not found, indexer uses the time listed at
+the beginning of each line.
+This time is either of the format "Jan 2 2006 15:04:05" or the format
+"Jan 2 15:04:05"
+.IP " 8." 4
+"email": Searches for the expression "[DATETIME]YYYY.MM.DD
+HH:MM:SS.SSSSSSS" on each line.
+Stores date listed inside the expression as a string and parses it to
+time.
+.IP " 9." 4
+"text": Stores the time listed at the beginning of each line as a string
+and parses it to time.
+This time is either of the format "Jan 2 2006 15:04:05 or the format
+"Jan 2 15:04:05"
+.IP "10." 4
+"snare": Searches for a date of the format "Mon Jan 02 15:04:05 2006" on
+each line.
+Stores date as a string and parses it to time.
+If a date of this format is not found, the time listed at the beginning
+of each line is used.
+This time is of the format "YYYY\-MM\-DDTHH:MM:SS\-ZZZZ"
+.IP "11." 4
+"iod": Searches for a date of the format "YYYY\-MM\-DDTHH:MM:SS\-ZZZZ"
+on each line.
+Stores date as a string and parses it to time.
+.IP "12." 4
+"win_messages": Searches for a date of the format "Mon Jan 2 15:04:05
+2006" on each line.
+If a date of this format is not found, indexer searches for a date of
+the format "YYYY\-MM\-DDTHH:MM:SS\-ZZ:ZZ" on each line.
+Stores date as a string and parses it to time.
+.IP "13." 4
+"wireless": Searches for the expression "Time=YYYY\-MM\-DDTHH:MM:SS" on
+each line.
+Stores date listed inside the expression as a string and parses it to
+time.
+If the expression is not found, the date listed at the beginning of each
+line is used.
+This time is either of the format "Jan 2 15:04:05 2006" or the format
+"Jan 2 15:04:05"
+.IP "14." 4
+"stealthwatch": Searches for a date of the format
+"YYYY\-MM\-DDTHH:MM:SS" on each line.
+Stores the date listed inside the expression as a string and parses it
+to time.
+.IP "15." 4
+"pcap": Retrieves time found in pcap file type
+.IP "16." 4
+"fsdb_time_col_1": Retrieves time found in the \f[I]first\f[] column of
+an fsdb\-formatted, tab\-delimited file.
+At the moment, this indexer does not read the fsdb header; it simply
+ignores it (along with any comments).
+.RS 4
+.PP
+If you\[aq]re getting errors with reading timestamps, check to make sure
+the file is tab\-delimited.
+.RE
+.IP "17." 4
+"fsdb_time_col_2": Retrieves time found in the \f[I]second\f[] column of
+an fsdb\-formatted, tab\-delimited file.
+See "fsdb_time_col_1" for additional details.

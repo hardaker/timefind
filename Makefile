@@ -1,4 +1,4 @@
-.PHONY: build check-version symlink-vendor
+.PHONY: build check-version symlink-vendor timefind-man-pages
 
 SHELL=/bin/bash
 
@@ -16,6 +16,8 @@ DESTDIR=
 PREFIX=/usr
 BINDIR=$(DESTDIR)$(PREFIX)/bin
 DOCDIR=$(DESTDIR)$(PREFIX)/share/timefind-$(VERSION)
+MANDIR=$(DESTDIR)$(PREFIX)/share/man
+MAN1DIR=$(DESTDIR)$(PREFIX)/share/man/man1
 
 export GOPATH := ${PWD}
 export GO15VENDOREXPERIMENT := 1
@@ -23,7 +25,7 @@ export GO15VENDOREXPERIMENT := 1
 SYMLINK_VENDOR=0
 VENDOR_DIRS=
 
-all:: check-version symlink-vendor bin/timefind bin/timefind_indexer symlink-clean
+all:: check-version symlink-vendor bin/timefind bin/timefind_indexer symlink-clean timefind-man-pages
 
 check-version:
 	@go version > /dev/null || (echo "Go not found. You need to install go: http://golang.org/doc/install"; false)
@@ -68,7 +70,7 @@ build:
 #
 # install is what is used for the .rpm
 #
-install: install_programs install_READMEs install_LICENSE
+install: install_programs install_READMEs install_LICENSE install_man_pages
 
 install_programs: bin/timefind bin/timefind_indexer
 	-mkdir -p $(BINDIR)
@@ -84,6 +86,11 @@ install_READMEs:
 install_LICENSE:
 	-mkdir -p $(DOCDIR)
 	cp ./COPYRIGHT ./LICENSE $(DOCDIR)
+
+install_man_pages: timefind-man-pages
+	-mkdir -p $(MAN1DIR)
+	cp ./src/timefind/timefind.1 $(MAN1DIR)
+	cp ./src/timefind/indexer/timefind_indexer.1 $(MAN1DIR)
 
 clean:
 	rm -rf bin/timefind bin/timefind_indexer
@@ -137,3 +144,14 @@ release:
 	cd $$HOME/WORKING/ANT/WWW/ant_2015/software/timefind && git add $(RELEASE_FILES)
 	mv $(RELEASE_FILES) RELEASE
 
+#
+# man pages:
+#
+src/timefind/timefind.1: src/timefind/README
+	pandoc -s -f markdown -t man -o $@ $< 
+
+src/timefind/indexer/timefind_indexer.1: src/timefind/indexer/README
+	pandoc -s -f markdown -t man -o $@ $< 
+
+.PHONY:
+timefind-man-pages: src/timefind/indexer/timefind_indexer.1 src/timefind/timefind.1
