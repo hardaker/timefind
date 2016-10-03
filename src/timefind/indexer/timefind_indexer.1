@@ -1,10 +1,10 @@
 .TH "" "" "" "" ""
-.SH indexer
+.SH timefind_indexer
 .PP
-`indexer\[aq] reads in a configuration file describing a source and
-outputs an index in CSV format containing a list of filenames, timestamp
-of the earliest record, timestamp of the latest record, and the time
-that the file was last modified.
+`timefind_indexer\[aq] reads in a configuration file describing a source
+and outputs an index in CSV format containing a list of filenames,
+timestamp of the earliest record, timestamp of the latest record, and
+the time that the file was last modified.
 .PP
 Using `timefind\[aq] in conjunction with these indexes, a user can
 downselect the number of files based on a time range.
@@ -14,23 +14,28 @@ Build configuration file.
 (e.g., SOURCENAME.conf.json) See Single Source Configuration
 File (#single-source-configuration-file).
 .IP "2." 3
-Run indexer.
+Run timefind_indexer.
 .RS 4
 .PP
-\&./indexer \-h
-.PP
-Usage: indexer [\-huv] [\-c PATH] \-c, \-\-config=PATH Path to
-configuration file (can be used multiple times) \-h, \-\-help Show this
-help message and exit \-u, \-\-unixtime write Unix time to indexes
-instead of RFC 3339 \-v, \-\-verbose Verbose progress indicators and
-messages
+\&./timefind_indexer \-h
 .RE
-.PP
-After building your configuration file, you can run the indexer:
 .IP
 .nf
 \f[C]
-\&./indexer\ \-c\ SOURCENAME.conf.json
+\ \ \ \ Usage:\ timefind_indexer\ [\-huv]\ [\-c\ PATH]
+\ \ \ \ \ \ \-c,\ \-\-config=PATH\ \ Path\ to\ configuration\ file\ (can\ be\ used\ multiple\ times)
+\ \ \ \ \ \ \-h,\ \-\-help\ \ \ \ \ \ \ \ \ Show\ this\ help\ message\ and\ exit
+\ \ \ \ \ \ \-u,\ \-\-unixtime\ \ \ \ \ write\ Unix\ time\ to\ indexes\ instead\ of\ RFC\ 3339
+\ \ \ \ \ \ \-v,\ \-\-verbose\ \ \ \ \ \ Verbose\ progress\ indicators\ and\ messages
+\f[]
+.fi
+.PP
+After building your configuration file, you can run the
+timefind_indexer:
+.IP
+.nf
+\f[C]
+\&./timefind_indexer\ \-c\ SOURCENAME.conf.json
 \f[]
 .fi
 .SH Single Source Configuration File
@@ -75,14 +80,14 @@ this:
 .PP
 The index directory ("indexDir") is where the indexed data will be
 stored.
-After the indexer has finished running, the indexes can be found in the
-in a .csv file located in "indexDir".
+After the timefind_indexer has finished running, the indexes can be
+found in the in a .csv file located in "indexDir".
 .PP
 The index filename is the same as the source name.
 .PP
-Recursive directory support: When the indexer is run, the directory
-structure that is traversed when indexing "paths" is created in the
-"indexDir." One index file is created per directory.
+Recursive directory support: When the timefind_indexer is run, the
+directory structure that is traversed when indexing "paths" is created
+in the "indexDir." One index file is created per directory.
 For directories containing subdirectories with an index file in them,
 the index file in the subdirectory is indexed and written to the
 directory currently being indexed.
@@ -118,7 +123,7 @@ and "exclude".
 "type" depends on the file format and which dates you wish to record
 from each file.
 See Data Types and Processors (#data-types-and-processors) for the types
-of data that the indexer supports.
+of data that the timefind_indexer supports.
 If you don\[aq]t see your data type listed, you will probably have to
 write a processor for it.
 .PP
@@ -180,8 +185,8 @@ traverse to that directory\[aq]s index and recursively process until we
 find the matching file entries, if any.
 .SH Data Types and Processors
 .PP
-The indexer reads data files and indexes the earliest and latest time
-found in each file.
+The timefind_indexer reads data files and indexes the earliest and
+latest time found in each file.
 It has the ability to index data classified under the following
 categories:
 .IP " 1." 4
@@ -214,20 +219,20 @@ time.
 on each line.
 Stores date listed inside the expression as a string and parses it to
 time.
-If the expression is not found, indexer searches for the expression
-"Begin: YYYY\-MM\-DD HH:MM:SS" on each line.
+If the expression is not found, timefind_indexer searches for the
+expression "Begin: YYYY\-MM\-DD HH:MM:SS" on each line.
 The date listed inside the expression is stored as a string and is
 parsed to a time.
-If the expression is not found, indexer uses the time listed at the
-beginning of each line.
+If the expression is not found, timefind_indexer uses the time listed at
+the beginning of each line.
 This time is either of the format "Jan 2 2006 15:04:05" or the format
 "Jan 2 15:04:05"
 .IP " 7." 4
 "juniper": Searches for a date of the format "YYYY\-MM\-DD HH:MM:SS" on
 each line.
 Stores date as a string and parses it to time.
-If a date of this format is not found, indexer uses the time listed at
-the beginning of each line.
+If a date of this format is not found, timefind_indexer uses the time
+listed at the beginning of each line.
 This time is either of the format "Jan 2 2006 15:04:05" or the format
 "Jan 2 15:04:05"
 .IP " 8." 4
@@ -254,8 +259,8 @@ Stores date as a string and parses it to time.
 .IP "12." 4
 "win_messages": Searches for a date of the format "Mon Jan 2 15:04:05
 2006" on each line.
-If a date of this format is not found, indexer searches for a date of
-the format "YYYY\-MM\-DDTHH:MM:SS\-ZZ:ZZ" on each line.
+If a date of this format is not found, timefind_indexer searches for a
+date of the format "YYYY\-MM\-DDTHH:MM:SS\-ZZ:ZZ" on each line.
 Stores date as a string and parses it to time.
 .IP "13." 4
 "wireless": Searches for the expression "Time=YYYY\-MM\-DDTHH:MM:SS" on
@@ -276,8 +281,8 @@ to time.
 .IP "16." 4
 "fsdb_time_col_1": Retrieves time found in the \f[I]first\f[] column of
 an fsdb\-formatted, tab\-delimited file.
-At the moment, this indexer does not read the fsdb header; it simply
-ignores it (along with any comments).
+At the moment, this timefind_indexer does not read the fsdb header; it
+simply ignores it (along with any comments).
 .RS 4
 .PP
 If you\[aq]re getting errors with reading timestamps, check to make sure
