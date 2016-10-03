@@ -37,16 +37,16 @@ or equivalently,
 Usage
 =====
 
-Usage: timefind [-hTtuv] [-b TIMESTAMP] [-c PATH] [-e TIMESTAMP] SOURCE [SOURCE ...]
- -b, --begin=TIMESTAMP
-                    Begin interval at timestamp
- -c, --config=PATH  Path to configuration file (can be used multiple times)
- -e, --end=TIMESTAMP
-                    End interval at timestamp
- -h, --help         Show this help message and exit
- -T, --human        Output human-readable start and end time for each path
- -t, --times        Output the start and end time for each path
- -v, --verbose      Verbose progress indicators and messages
+    Usage: timefind [-hTtuv] [-b TIMESTAMP] [-c PATH] [-e TIMESTAMP] SOURCE [SOURCE ...]
+     -b, --begin=TIMESTAMP
+                        Begin interval at timestamp
+     -c, --config=PATH  Path to configuration file (can be used multiple times)
+     -e, --end=TIMESTAMP
+                        End interval at timestamp
+     -h, --help         Show this help message and exit
+     -T, --human        Output human-readable start and end time for each path
+     -t, --times        Output the start and end time for each path
+     -v, --verbose      Verbose progress indicators and messages
 
 TIMESTAMPs must be formatted in the following ways:
 
