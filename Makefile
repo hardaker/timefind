@@ -14,7 +14,7 @@ VERSION_MATCH=$(shell ([ "$(VERSION)" == "$(VERSION_FULL)" ] && echo "1") || ech
 DESTDIR=
 PREFIX=$(DESTDIR)/usr
 BINDIR=$(PREFIX)/bin
-DOCDIR=$(DESTDIR)/usr/share/timefind-$(VERSION)
+DOCDIR=$(DESTDIR)/share/timefind-$(VERSION)
 
 export GOPATH := ${PWD}
 export GO15VENDOREXPERIMENT := 1
