@@ -81,7 +81,7 @@ install_programs: bin/timefind bin/timefind_indexer
 install_READMEs:
 	-mkdir -p $(DOCDIR)
 	cp ./src/timefind/README $(DOCDIR)/README.timefind
-	cp ./src/indexer/README $(DOCDIR)/README.timefind_indexer
+	cp ./src/timefind/indexer/README $(DOCDIR)/README.timefind_indexer
 
 install_LICENSE:
 	-mkdir -p $(DOCDIR)
